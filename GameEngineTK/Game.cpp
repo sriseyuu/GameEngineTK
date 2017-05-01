@@ -77,10 +77,18 @@ void Game::Initialize(HWND window, int width, int height)
 		L"Resources\\SkyDome.cmo",
 		*m_factory);
 
+
 	m_modelGround = Model::CreateFromCMO(m_d3dDevice.Get(),
 		L"Resources\\ground1m.cmo",
 		*m_factory);
 
+
+
+	m_modelBall = Model::CreateFromCMO(m_d3dDevice.Get(),
+		L"Resources\\Ball.cmo",
+		*m_factory);
+
+	m_count = 0;
 }
 
 // Executes the basic game loop.
@@ -97,13 +105,62 @@ void Game::Tick()
 // Updates the world.
 void Game::Update(DX::StepTimer const& timer)
 {
-    float elapsedTime = float(timer.GetElapsedSeconds());
+	float elapsedTime = float(timer.GetElapsedSeconds());
 
-    // TODO: Add your game logic here.
-    elapsedTime;
+	// TODO: Add your game logic here.
+	elapsedTime;
 
 	//毎フレームごとに処理を書く
 	m_debugCamera->Update();
+
+	for (int i = 0; i < 10000; i++)
+	{
+		Matrix transMat = Matrix::CreateTranslation((-50.0f) + (i % 100) ,0.0f, -50.0f + (i / 100));
+	
+		m_worldGround[i] = transMat;
+	}
+
+	for (int i = 0; i < 20; i++)
+	{
+		//ワールド行列を計算
+		//スケーリング
+		Matrix scalemat = Matrix::CreateScale(1.0f);
+
+		//ピッチ(仰角)
+		Matrix rotmatX = Matrix::CreateRotationX(0);
+		//ヨー(方位角)
+		Matrix rotmatY;
+
+		if (i < 10)
+		{
+			rotmatY = Matrix::CreateRotationY(XMConvertToRadians((i * 36) + m_count));
+		}
+		else
+		{
+			rotmatY = Matrix::CreateRotationY(XMConvertToRadians(((i - 10) * 36) - m_count));
+		}
+
+		//ロール(偏波角)
+		Matrix rotmatZ = Matrix::CreateRotationZ(0);
+
+		//回転行列の合成
+		Matrix rotmat = rotmatZ * rotmatX * rotmatY;
+		Matrix transmat;
+		//平行移動
+		if (i < 10)
+		{
+			transmat = Matrix::CreateTranslation(20.0f, 00.0f, 0.0f);
+		}
+		else
+		{
+			transmat = Matrix::CreateTranslation(40.0f, 00.0f, 0.0f);
+		}
+
+		//ワールド行列の合成(SRT)
+		m_worldBall[i] = scalemat * transmat * rotmat;
+	}
+
+	m_count++;
 }
 
 // Draws the scene.
@@ -151,7 +208,7 @@ void Game::Render()
 		XM_PI / 4.f,//視野角(上下方向)
 		float(m_outputWidth) / float(m_outputHeight),
 		0.1f,//ニアクリップ
-		120.f//ファークリップ
+		1000.f//ファークリップ
 	);
 
 	m_effect->SetView(m_view);
@@ -167,11 +224,27 @@ void Game::Render()
 		m_view,
 		m_proj);
 
-	m_modelGround->Draw(m_d3dContext.Get(),
-		*m_states,
-		m_world,
-		m_view,
-		m_proj);
+	for (int i = 0; i < 10000; i++)
+	{
+
+		m_modelGround->Draw(m_d3dContext.Get(),
+			*m_states,
+			m_worldGround[i],
+			m_view,
+			m_proj);
+	}
+
+
+
+	for (int i = 0; i < 20; i++)
+	{
+		m_modelBall->Draw(m_d3dContext.Get(),
+			*m_states,
+			m_worldBall[i],
+			m_view,
+			m_proj);
+
+	}
 
 	m_batch->Begin();
 
