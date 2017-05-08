@@ -11,7 +11,10 @@
 #include <CommonStates.h>
 #include <SimpleMath.h>
 #include <Model.h>
+#include <Keyboard.h>
 #include "DebugCamera.h"
+
+#define MAX_DISTANCE 100
 
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.
@@ -98,13 +101,24 @@ private:
 	std::unique_ptr<DirectX::Model> m_modelSkyDome;
 	//地面モデル
 	std::unique_ptr<DirectX::Model> m_modelGround;
-	//球モデル
-	std::unique_ptr<DirectX::Model> m_modelBall;
+	//ティーポットモデル
+	std::unique_ptr<DirectX::Model> m_modelTeapot;
+	//頭部モデル
+	std::unique_ptr<DirectX::Model> m_modelHead;
+	DirectX::SimpleMath::Vector3 m_headPos;
+	float m_headRote;
 
-	//球のワールド行列
-	DirectX::SimpleMath::Matrix m_worldBall[20];
-
-	DirectX::SimpleMath::Matrix m_worldGround[10000];
+	//頭部ワールド座標
+	DirectX::SimpleMath::Matrix m_worldHead;
 
 	int m_count;
+
+	//原点からの角度
+	float m_rotation[20];
+	//ティーポットの原点からの距離
+	int m_distance[20];
+	//倍率
+	float m_magnification;
+	//キーボード
+	std::unique_ptr<DirectX::Keyboard> m_keyboard;
 };

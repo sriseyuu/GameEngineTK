@@ -77,18 +77,24 @@ void Game::Initialize(HWND window, int width, int height)
 		L"Resources\\SkyDome.cmo",
 		*m_factory);
 
-
 	m_modelGround = Model::CreateFromCMO(m_d3dDevice.Get(),
-		L"Resources\\ground1m.cmo",
+		L"Resources\\ground200m.cmo",
 		*m_factory);
 
 
-
-	m_modelBall = Model::CreateFromCMO(m_d3dDevice.Get(),
-		L"Resources\\Ball.cmo",
+	m_modelHead = Model::CreateFromCMO(m_d3dDevice.Get(),
+		L"Resources\\Head.cmo",
 		*m_factory);
+
+	m_worldHead = Matrix::Identity;
 
 	m_count = 0;
+	m_magnification = 1.0f;
+
+	m_headPos = Vector3(0,0,0);
+	m_headRote = 0.0f;
+
+	m_keyboard = std::make_unique<Keyboard>();
 }
 
 // Executes the basic game loop.
@@ -98,6 +104,7 @@ void Game::Tick()
     {
         Update(m_timer);
     });
+
 
     Render();
 }
@@ -113,52 +120,48 @@ void Game::Update(DX::StepTimer const& timer)
 	//毎フレームごとに処理を書く
 	m_debugCamera->Update();
 
-	for (int i = 0; i < 10000; i++)
-	{
-		Matrix transMat = Matrix::CreateTranslation((-50.0f) + (i % 100) ,0.0f, -50.0f + (i / 100));
-	
-		m_worldGround[i] = transMat;
+
+	Keyboard::State kb = m_keyboard->GetState();
+
+	//左旋回処理
+	if (kb.A) {
+		m_headRote +=1.0f;
+		// A key is down
+	}
+	//右旋回処理
+	if (kb.D) {
+		m_headRote += -1.0f;
+		// D key is down
+	}
+	//前進処理
+	if (kb.W) {
+		Vector3 moveV(0, 0, -0.1f);
+
+		moveV = Vector3::TransformNormal(moveV, m_worldHead);
+		
+		m_headPos += moveV;
+
+		// W key is down
+	}
+	//後退処理
+	if (kb.S) {
+		Vector3 moveV(0, 0, 0.1f);
+
+		moveV = Vector3::TransformNormal(moveV, m_worldHead);
+
+		m_headPos += moveV;
+
+		// S key is down
 	}
 
-	for (int i = 0; i < 20; i++)
-	{
-		//ワールド行列を計算
-		//スケーリング
-		Matrix scalemat = Matrix::CreateScale(1.0f);
+	//ワールド行列を変更
+	Matrix rotmatY = Matrix::CreateRotationY(XMConvertToRadians(m_headRote));
+	Matrix transmat = Matrix::CreateTranslation(m_headPos);
 
-		//ピッチ(仰角)
-		Matrix rotmatX = Matrix::CreateRotationX(0);
-		//ヨー(方位角)
-		Matrix rotmatY;
+	Vector3 vector = Vector3::TransformNormal(vector, m_worldHead);
 
-		if (i < 10)
-		{
-			rotmatY = Matrix::CreateRotationY(XMConvertToRadians((i * 36) + m_count));
-		}
-		else
-		{
-			rotmatY = Matrix::CreateRotationY(XMConvertToRadians(((i - 10) * 36) - m_count));
-		}
+	m_worldHead = rotmatY * transmat;
 
-		//ロール(偏波角)
-		Matrix rotmatZ = Matrix::CreateRotationZ(0);
-
-		//回転行列の合成
-		Matrix rotmat = rotmatZ * rotmatX * rotmatY;
-		Matrix transmat;
-		//平行移動
-		if (i < 10)
-		{
-			transmat = Matrix::CreateTranslation(20.0f, 00.0f, 0.0f);
-		}
-		else
-		{
-			transmat = Matrix::CreateTranslation(40.0f, 00.0f, 0.0f);
-		}
-
-		//ワールド行列の合成(SRT)
-		m_worldBall[i] = scalemat * transmat * rotmat;
-	}
 
 	m_count++;
 }
@@ -224,51 +227,26 @@ void Game::Render()
 		m_view,
 		m_proj);
 
-	for (int i = 0; i < 10000; i++)
-	{
+	m_modelGround->Draw(m_d3dContext.Get(),
+		*m_states,
+		Matrix::Identity,
+		m_view,
+		m_proj);
 
-		m_modelGround->Draw(m_d3dContext.Get(),
-			*m_states,
-			m_worldGround[i],
-			m_view,
-			m_proj);
-	}
+	m_modelHead->Draw(m_d3dContext.Get(),
+		*m_states,
+		m_worldHead,
+		m_view,
+		m_proj);
 
-
-
-	for (int i = 0; i < 20; i++)
-	{
-		m_modelBall->Draw(m_d3dContext.Get(),
-			*m_states,
-			m_worldBall[i],
-			m_view,
-			m_proj);
-
-	}
 
 	m_batch->Begin();
 
-
-
 	m_batch->DrawIndexed(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, indices, 6, vertices, 4);
 
-	//m_batch->DrawLine
-	//(
-	//	VertexPositionColor(Vector3(0, 0, 0), Color(1, 1, 1)),
-	//	VertexPositionColor(Vector3(100, 100, 0), Color(1, 1, 1))
-	//);
-
-	//VertexPositionColor v1(Vector3(400.f, 150.f, 0.f), Colors::Yellow);
-	//VertexPositionColor v2(Vector3(600.f, 450.f, 0.f), Colors::Yellow);
-	//VertexPositionColor v3(Vector3(200.f, 450.f, 0.f), Colors::Yellow);
-
-	//VertexPositionColor v1(Vector3(0.f, 0.5f, 0.5f), Colors::Black);
-	//VertexPositionColor v2(Vector3(0.5f, -0.5f, 0.5f), Colors::Yellow);
-	//VertexPositionColor v3(Vector3(-0.5f, -0.5f, 0.5f), Colors::White);
-
-	//m_batch->DrawTriangle(v1, v2, v3);
 
 	m_batch->End();
+
 
     Present();
 }
