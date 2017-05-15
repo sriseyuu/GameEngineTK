@@ -36,10 +36,7 @@ void Game::Initialize(HWND window, int width, int height)
 
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
-    /*
-    m_timer.SetFixedTimeStep(true);
-    m_timer.SetTargetElapsedSeconds(1.0 / 60);
-    */
+
 
 	//初期化はここに書く
 
@@ -95,6 +92,11 @@ void Game::Initialize(HWND window, int width, int height)
 	m_headRote = 0.0f;
 
 	m_keyboard = std::make_unique<Keyboard>();
+
+	//カメラの生成
+	m_camera = std::make_unique<FollowCamera>(m_outputWidth,m_outputHeight);
+
+	m_headPos = Vector3(0,0,3);
 }
 
 // Executes the basic game loop.
@@ -125,12 +127,12 @@ void Game::Update(DX::StepTimer const& timer)
 
 	//左旋回処理
 	if (kb.A) {
-		m_headRote +=1.0f;
+		m_headRote += XMConvertToRadians(1.0f);
 		// A key is down
 	}
 	//右旋回処理
 	if (kb.D) {
-		m_headRote += -1.0f;
+		m_headRote += XMConvertToRadians(-1.0f);
 		// D key is down
 	}
 	//前進処理
@@ -155,13 +157,24 @@ void Game::Update(DX::StepTimer const& timer)
 	}
 
 	//ワールド行列を変更
-	Matrix rotmatY = Matrix::CreateRotationY(XMConvertToRadians(m_headRote));
+	Matrix rotmatY = Matrix::CreateRotationY(m_headRote);
 	Matrix transmat = Matrix::CreateTranslation(m_headPos);
 
 	Vector3 vector = Vector3::TransformNormal(vector, m_worldHead);
 
 	m_worldHead = rotmatY * transmat;
 
+	
+//__/カメラの更新/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/__/
+
+	//カメラに自機（追従対象）の情報を送る
+	m_camera->SetTargetPos(m_headPos);
+	m_camera->SetTargetAngle(m_headRote);
+
+	//カメラの更新処理
+	m_camera->Update();
+	m_view = m_camera->GetViewMatrix();
+	m_proj = m_camera->GetProjectionMatrix();
 
 	m_count++;
 }
@@ -198,21 +211,7 @@ void Game::Render()
 	m_d3dContext->OMSetDepthStencilState(m_states->DepthNone(), 0);
 	m_d3dContext->RSSetState(m_states->CullNone());
 
-	////ビュー行列を生成
-	//m_view = Matrix::CreateLookAt(
-	//	Vector3(2.f, 2.f, 2.f),//カメラ視点
-	//	Vector3(0,0,0),//カメラ参照点
-	//	Vector3(1,1,0)//上方向ベクトル
-	//);
 
-	m_view = m_debugCamera->GetCameraMatrix();
-	//プレジェクション行列の生成
-	m_proj = Matrix::CreatePerspectiveFieldOfView(
-		XM_PI / 4.f,//視野角(上下方向)
-		float(m_outputWidth) / float(m_outputHeight),
-		0.1f,//ニアクリップ
-		1000.f//ファークリップ
-	);
 
 	m_effect->SetView(m_view);
 	m_effect->SetProjection(m_proj);

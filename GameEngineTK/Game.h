@@ -14,6 +14,8 @@
 #include <Keyboard.h>
 #include "DebugCamera.h"
 
+#include "FollowCamera.h"
+
 #define MAX_DISTANCE 100
 
 // A basic game implementation that creates a D3D11 device and
@@ -121,4 +123,6 @@ private:
 	float m_magnification;
 	//キーボード
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
+
+	std::unique_ptr<FollowCamera> m_camera;
 };
